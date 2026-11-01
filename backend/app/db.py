@@ -9,8 +9,12 @@ import os
 from sqlalchemy import Column, Date, Float, MetaData, String, Table, create_engine
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./renda_fixa.db")
+# Alguns provedores entregam "postgres://", que o SQLAlchemy não aceita.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL)
+# pool_pre_ping descarta conexões que o Postgres serverless (Neon) fechou por inatividade.
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 metadata = MetaData()
 
 # Uma linha por dia por indicador (selic, cdi, ipca).

@@ -25,7 +25,7 @@ GitHub Actions (cron, 18h)  ->  ETL Python  ->  PostgreSQL / SQLite
 cd backend
 python -m venv .venv
 .venv\Scripts\activate          # Windows (no Linux/Mac: source .venv/bin/activate)
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
 python -m app.etl               # baixa os dados (últimos 3 anos) para renda_fixa.db
 uvicorn app.main:app --reload   # API em http://localhost:8000 (docs em /docs)
