@@ -71,6 +71,11 @@ def _titulos_ativos(conn) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+@app.get("/")
+def raiz():
+    return {"api": "Monitor de Renda Fixa", "docs": "/docs"}
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
