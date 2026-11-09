@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 21 * * 1-5" # 18h de Brasília, dias úteis
   workflow_dispatch: # permite rodar na mão pela aba Actions
+    inputs:
+      anos:
+        description: "Quantos anos de histórico baixar (use 3 na primeira carga)"
+        default: "1"
+        required: true
 
 jobs:
   etl:
@@ -11,15 +16,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
+      - name: Confere o secret DATABASE_URL
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Cadastre o secret DATABASE_URL em Settings > Secrets and variables > Actions"
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: backend/requirements*.txt
       - run: pip install -r requirements-dev.txt
       - run: pytest -q
-      - run: python -m app.etl --anos 1
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: "" # os testes usam um SQLite temporário
+      - run: python -m app.etl --anos ${{ github.event.inputs.anos || '1' }}

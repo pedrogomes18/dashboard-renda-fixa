@@ -15,6 +15,8 @@ import { Esqueleto, Estado } from "@/components/ui";
 import { api, API_URL, fmtDataHora, type Taxas } from "@/lib/api";
 import { useEventos } from "@/lib/eventos";
 
+const MAX_TENTATIVAS = 15; // 15 × 5 s ≈ 75 s
+
 export default function Home() {
   const [taxas, setTaxas] = useState<Taxas | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -29,14 +31,30 @@ export default function Home() {
     }, []),
   );
 
+  // No plano gratuito do Render a API hiberna e leva até ~1 min para acordar:
+  // em vez de mostrar erro logo, tentamos de novo algumas vezes.
+  const [tentativa, setTentativa] = useState(0);
   useEffect(() => {
     let ativo = true;
-    api
-      .taxas()
-      .then((t) => ativo && (setTaxas(t), setErro(null)))
-      .catch((e) => ativo && setErro(e.message));
+    let espera: ReturnType<typeof setTimeout>;
+    const carregar = (n: number) => {
+      api
+        .taxas()
+        .then((t) => ativo && (setTaxas(t), setErro(null), setTentativa(0)))
+        .catch((e) => {
+          if (!ativo) return;
+          if (n < MAX_TENTATIVAS) {
+            setTentativa(n + 1);
+            espera = setTimeout(() => carregar(n + 1), 5000);
+          } else {
+            setErro(e.message);
+          }
+        });
+    };
+    carregar(0);
     return () => {
       ativo = false;
+      clearTimeout(espera);
     };
   }, [versao]);
 
@@ -65,6 +83,12 @@ export default function Home() {
           </Estado>
         ) : !taxas ? (
           <>
+            {tentativa > 0 && (
+              <p className="entrar rounded-xl border border-line bg-surface px-4 py-3 text-sm text-secondary">
+                Acordando o servidor… a API fica em plano gratuito e hiberna quando ninguém usa. Isso leva até 1
+                minuto (tentativa {tentativa} de {MAX_TENTATIVAS}).
+              </p>
+            )}
             <CardsEsqueleto />
             <Esqueleto className="h-96 rounded-2xl" />
           </>

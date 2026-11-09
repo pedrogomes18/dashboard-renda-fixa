@@ -42,9 +42,14 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan,
 )
+# Aceita "https://a.vercel.app/, https://b.com" (espaços e barra final são ignorados).
+ORIGENS = [o.strip().rstrip("/") for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=ORIGENS,
+    # Opcional: libera as URLs de preview da Vercel, ex.: https://renda-fixa-.*\.vercel\.app
+    allow_origin_regex=os.getenv("CORS_ORIGIN_REGEX") or None,
     allow_methods=["GET"],
     allow_headers=["*"],
 )

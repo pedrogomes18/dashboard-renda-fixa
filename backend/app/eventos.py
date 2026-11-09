@@ -44,6 +44,9 @@ def ultima_execucao() -> dict | None:
 class Difusor:
     def __init__(self) -> None:
         self._filas: set[asyncio.Queue] = set()
+        # Última execução já conhecida pelos clientes; None = ainda não sincronizado.
+        self._id_visto: int | None = None
+        self._sincronizado = False
 
     @property
     def conectados(self) -> int:
@@ -81,18 +84,27 @@ class Difusor:
             self._presenca()
 
     async def monitorar(self) -> None:
-        """Loop de fundo: detecta execuções novas da ETL e avisa todo mundo."""
-        vista = await asyncio.to_thread(ultima_execucao)
-        id_visto = vista["id"] if vista else None
+        """Loop de fundo: detecta execuções novas da ETL e avisa todo mundo.
+
+        Sem ninguém conectado, não consulta o banco, para o Postgres serverless
+        poder hibernar. Quem conecta recebe o estado atual no evento "status".
+        """
         while True:
             await asyncio.sleep(INTERVALO_VERIFICACAO)
+            if not self.conectados:
+                self._sincronizado = False
+                continue
             try:
                 atual = await asyncio.to_thread(ultima_execucao)
             except Exception as e:  # banco fora do ar não pode derrubar a API
                 print(f"[sse] falha ao consultar execuções: {e}")
                 continue
-            if atual and atual["id"] != id_visto:
-                id_visto = atual["id"]
+            id_atual = atual["id"] if atual else None
+            if not self._sincronizado:
+                # Chegou antes do "status" do cliente: só registra, quem conecta já lê o estado atual.
+                self._id_visto, self._sincronizado = id_atual, True
+            elif id_atual is not None and id_atual != self._id_visto:
+                self._id_visto = id_atual
                 self.publicar("atualizacao", atual)
 
 

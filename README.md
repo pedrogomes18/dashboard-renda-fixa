@@ -162,11 +162,27 @@ IDs dos títulos seguem o padrão `tipo-vencimento`, ex.: `tesouro-ipca-2035-05-
 
 ## Agendamento e deploy
 
-- `.github/workflows/etl.yml` roda a ETL de segunda a sexta às 18h (Brasília). Basta cadastrar o secret `DATABASE_URL` no repositório.
+```mermaid
+flowchart LR
+    V["Vercel<br/>frontend/"] -->|REST + SSE| R["Render<br/>backend/ (render.yaml)"]
+    R --> N[("Neon<br/>Postgres")]
+    G["GitHub Actions<br/>ETL diária"] --> N
+```
+
+Back e front ficam no mesmo repositório; cada plataforma olha só para a sua pasta (**Root Directory**).
+
+| Peça | Onde | Configuração |
+|---|---|---|
+| Banco | Neon, região `us-east-1` | Copie a connection string |
+| ETL | GitHub Actions | Secret `DATABASE_URL`; primeira carga manual com `anos = 3` |
+| API | Render (Blueprint pelo `render.yaml`) | `DATABASE_URL`, `CORS_ORIGINS` = URL da Vercel |
+| Front | Vercel, Root Directory `frontend` | `NEXT_PUBLIC_API_URL` = URL do Render |
+
+- `.github/workflows/etl.yml` roda a ETL de segunda a sexta às 18h (Brasília) e pode ser disparada na aba Actions.
 - `.github/workflows/ci.yml` roda testes, lint e build a cada push.
-- **Front**: Vercel, com `NEXT_PUBLIC_API_URL` apontando para a API.
-- **API**: precisa de um servidor que mantenha conexões abertas por causa do SSE (Render, Railway, Fly.io). O `backend/Dockerfile` já lê a variável `PORT` dessas plataformas. Funções serverless encerram a conexão depois de alguns segundos.
-- **Banco**: Neon (Postgres serverless). A API usa `pool_pre_ping` para descartar conexões que o Neon fechou por inatividade.
+- A API precisa de um servidor que mantenha conexões abertas por causa do SSE, por isso fica no Render e não em funções serverless.
+- No plano gratuito do Render a API hiberna após 15 min sem acesso; o painel avisa e tenta de novo até ela acordar.
+- Sem ninguém com o painel aberto, a API não consulta o banco, e o Neon pode hibernar e economizar horas do plano gratuito.
 
 ## Próximos passos
 

@@ -1,0 +1,22 @@
+# Blueprint do Render: cria a API a partir da pasta backend/.
+# No Render: New > Blueprint > escolha este repositório.
+services:
+  - type: web
+    name: renda-fixa-api
+    runtime: python
+    plan: free
+    region: virginia # mesma região do banco no Neon (us-east-1)
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.1
+      - key: DATABASE_URL
+        sync: false # o Render pede o valor na criação
+      - key: CORS_ORIGINS
+        sync: false # URL do front na Vercel, ex.: https://renda-fixa.vercel.app
+      - key: SSE_INTERVALO
+        value: "15"

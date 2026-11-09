@@ -51,3 +51,40 @@ def test_assinante_recebe_status_presenca_e_atualizacao(monkeypatch):
         ("presenca", {"conectados": 1}),
         ("atualizacao", {"id": 7}),
     ]
+
+
+def test_monitor_avisa_so_execucoes_novas_e_nao_consulta_sem_clientes(monkeypatch):
+    execucoes = iter([{"id": 1}, {"id": 1}, {"id": 2}, {"id": 2}])
+    consultas = []
+
+    def falsa():
+        consultas.append(1)
+        return next(execucoes, {"id": 2})
+
+    monkeypatch.setattr("app.eventos.ultima_execucao", falsa)
+    monkeypatch.setattr("app.eventos.INTERVALO_VERIFICACAO", 0.01)
+
+    async def cenario():
+        difusor = Difusor()
+        monitor = asyncio.create_task(difusor.monitorar())
+        await asyncio.sleep(0.05)
+        assert consultas == []  # ninguém conectado: banco em paz
+
+        fim = asyncio.Event()
+        recebidas = []
+
+        async def desconectado():
+            return fim.is_set()
+
+        async def cliente():
+            async for msg in difusor.assinar(desconectado):
+                recebidas.append(msg)
+                if "atualizacao" in msg:
+                    fim.set()
+
+        await asyncio.wait_for(asyncio.create_task(cliente()), timeout=2)
+        monitor.cancel()
+        return recebidas
+
+    eventos = _eventos(asyncio.run(cenario()))
+    assert [e for e in eventos if e[0] == "atualizacao"] == [("atualizacao", {"id": 2})]
