@@ -112,6 +112,9 @@ def baixar_tesouro(client: httpx.Client) -> str:
         return resp.content.decode("latin-1")
 
 
+IPCA_DIAS_MINIMOS = 800
+
+
 def run(anos: int = 3) -> None:
     iniciado_em = datetime.now(timezone.utc)
     hoje = date.today()
@@ -121,7 +124,10 @@ def run(anos: int = 3) -> None:
     with httpx.Client(timeout=120) as client:
         rows_ind = []
         for serie, codigo in SERIES_SGS.items():
-            rows = parse_sgs(baixar_sgs(client, codigo, desde, hoje), serie, hoje)
+            # O IPCA é mensal e sai com ~40 dias de atraso: o acumulado de 12 meses
+            # (e a variação dele em 12 meses) precisa de pelo menos 2 anos de série.
+            inicio = min(desde, hoje - timedelta(days=IPCA_DIAS_MINIMOS)) if serie == "ipca" else desde
+            rows = parse_sgs(baixar_sgs(client, codigo, inicio, hoje), serie, hoje)
             print(f"[bcb] {serie}: {len(rows)} registros")
             rows_ind.extend(rows)
 

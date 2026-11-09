@@ -4,6 +4,10 @@
 
 Painel que coleta todo dia as taxas públicas de juros do Brasil (Selic, CDI, IPCA e todos os títulos do Tesouro Direto), mostra a evolução em gráficos, simula investimentos e **se atualiza sozinho em tempo real** quando chegam dados novos.
 
+**[Ver o painel ao vivo](https://dashboard-renda-fixa.vercel.app)** · [Documentação da API](https://renda-fixa-api-mkc7.onrender.com/docs)
+
+> A API fica no plano gratuito do Render e hiberna sem uso: o primeiro acesso pode levar até 1 minuto.
+
 ![Visão geral do painel](docs/screenshot.jpg)
 
 ## Funcionalidades
@@ -186,6 +190,6 @@ Back e front ficam no mesmo repositório; cada plataforma olha só para a sua pa
 
 ## Próximos passos
 
-- [ ] Deploy público
+- [x] Deploy público (Vercel + Render + Neon)
 - [ ] Alertas por e-mail ("me avise quando o IPCA+ 2035 passar de 7%")
 - [ ] Login para salvar favoritos
