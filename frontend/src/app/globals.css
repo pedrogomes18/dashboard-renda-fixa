@@ -2,47 +2,99 @@
 
 :root {
   color-scheme: light;
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --text-primary: #0b0b0b;
+  --page: #f6f6f3;
+  --surface: #ffffff;
+  --surface-2: #f1f0ec;
+  --text-primary: #0f0f0e;
   --text-secondary: #52514e;
   --text-muted: #898781;
-  --grid: #e1e0d9;
+  --grid: #e8e7e1;
   --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
+  --border: rgba(15, 15, 14, 0.09);
+  --accent: #2a78d6;
+  --accent-soft: rgba(42, 120, 214, 0.1);
+  --pos: #1a8a5a;
+  --neg: #c8453b;
   --series-1: #2a78d6;
   --series-2: #eb6834;
+  --series-3: #1f9d74;
+  --series-4: #8a5cd6;
+  --series-5: #d6458c;
+  --series-6: #b88a12;
+  --shadow: 0 1px 2px rgba(15, 15, 14, 0.04), 0 4px 16px rgba(15, 15, 14, 0.04);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --page: #0d0d0d;
-    --surface: #1a1a19;
+    --page: #0b0b0b;
+    --surface: #161615;
+    --surface-2: #1f1f1d;
     --text-primary: #f0efec;
     --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255, 255, 255, 0.1);
-    --series-1: #3987e5;
-    --series-2: #d95926;
+    --text-muted: #8f8d86;
+    --grid: #262624;
+    --axis: #3a3a37;
+    --border: rgba(255, 255, 255, 0.08);
+    --accent: #4b95ec;
+    --accent-soft: rgba(75, 149, 236, 0.14);
+    --pos: #3fbf85;
+    --neg: #ef6a5f;
+    --series-1: #4b95ec;
+    --series-2: #e86f3d;
+    --series-3: #34b98c;
+    --series-4: #a07ce8;
+    --series-5: #e5619f;
+    --series-6: #d4a52a;
+    --shadow: none;
   }
 }
 
 @theme inline {
   --color-page: var(--page);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-primary: var(--text-primary);
   --color-secondary: var(--text-secondary);
   --color-muted: var(--text-muted);
   --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
   --color-series-1: var(--series-1);
   --color-series-2: var(--series-2);
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --shadow-card: var(--shadow);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 body {
   background: var(--page);
   color: var(--text-primary);
+}
+
+/* Ponto pulsante do indicador "ao vivo". */
+@keyframes pulso {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pos) 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.pulso { animation: pulso 2s infinite; }
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.entrar { animation: entrar 0.25s ease-out; }
+
+input[type="range"] { accent-color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .pulso, .entrar { animation: none; }
 }

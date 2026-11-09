@@ -1,0 +1,47 @@
+# Sobe o projeto inteiro: docker compose up --build
+# Front em http://localhost:3000, API em http://localhost:8000/docs
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: renda
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      retries: 15
+
+  # Roda a ETL uma vez ao subir (baixa 3 anos de dados) e termina.
+  etl:
+    build: ./backend
+    command: python -m app.etl
+    environment:
+      DATABASE_URL: postgresql://postgres:renda@db:5432/postgres
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:renda@db:5432/postgres
+      CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

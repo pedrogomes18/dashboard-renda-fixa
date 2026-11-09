@@ -25,6 +25,42 @@ export type HistoricoTitulo = {
 export type Taxas = {
   indicadores: Record<Serie, Indicador | null>;
   titulos: Titulo[];
+  atualizado_em: string | null;
+};
+
+export type Execucao = {
+  id: number;
+  iniciado_em: string;
+  concluido_em: string;
+  origem: string;
+  registros: number;
+};
+
+export type ProdutoSimulado = {
+  produto: string;
+  taxa_aa: number;
+  bruto: number;
+  imposto: number;
+  custodia: number;
+  liquido: number;
+  liquido_real: number;
+  rentabilidade_liquida: number;
+  evolucao: number[];
+};
+
+export type Simulacao = {
+  valor: number;
+  meses: number;
+  aliquota_ir: number;
+  premissas: {
+    cdi: number;
+    selic: number;
+    ipca_12m: number;
+    taxa_prefixado: number | null;
+    taxa_ipca_real: number | null;
+    spread_selic: number;
+  };
+  produtos: ProdutoSimulado[];
 };
 
 async function get<T>(path: string): Promise<T> {
@@ -39,6 +75,8 @@ export const api = {
     get<Ponto[]>(`/indicadores/${serie}/historico${desde ? `?desde=${desde}` : ""}`),
   titulo: (id: string, desde?: string) =>
     get<HistoricoTitulo>(`/titulos/${id}/historico${desde ? `?desde=${desde}` : ""}`),
+  simulacao: (p: { valor: number; meses: number; pct_cdb: number; pct_lci: number }) =>
+    get<Simulacao>(`/simulacao?${new URLSearchParams(Object.entries(p).map(([k, v]) => [k, String(v)]))}`),
 };
 
 // ---- formatação ----
@@ -54,6 +92,16 @@ export const fmtData = (iso: string) => {
   const [a, m, d] = iso.split("-");
   return `${d}/${m}/${a}`;
 };
+
+// Data e hora local, ex.: "09/11 às 18:04".
+export const fmtDataHora = (iso: string) =>
+  new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(", ", " às ");
+
+export const fmtPP = (v: number) =>
+  `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.`;
+
+/** Juro real: quanto a taxa nominal rende acima da inflação. */
+export const juroReal = (nominal: number, inflacao: number) => ((1 + nominal / 100) / (1 + inflacao / 100) - 1) * 100;
 
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 export const fmtMesAno = (iso: string) => {
@@ -79,5 +127,11 @@ export function desdeDoPeriodo(id: PeriodoId): string {
   const meses = PERIODOS.find((p) => p.id === id)!.meses;
   const d = new Date();
   d.setMonth(d.getMonth() - meses);
-  return d.toISOString().slice(0, 10);
+  return dataLocal(d);
+}
+
+// AAAA-MM-DD no fuso local (toISOString usaria UTC e poderia voltar um dia).
+export function dataLocal(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }

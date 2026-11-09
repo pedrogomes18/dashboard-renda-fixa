@@ -15,3 +15,6 @@ next-env.d.ts
 # Ambiente
 .env
 .env.local
+
+# Claude Code
+.claude/

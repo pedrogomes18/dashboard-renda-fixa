@@ -5,10 +5,13 @@ DATABASE_URL apontando para um PostgreSQL (Neon, Supabase...).
 """
 
 import os
+from pathlib import Path
 
-from sqlalchemy import Column, Date, Float, MetaData, String, Table, create_engine
+from sqlalchemy import Column, Date, DateTime, Float, Integer, MetaData, String, Table, create_engine
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./renda_fixa.db")
+# Caminho fixo (backend/renda_fixa.db), para não depender da pasta onde o comando roda.
+_SQLITE_PADRAO = Path(__file__).resolve().parent.parent / "renda_fixa.db"
+DATABASE_URL = os.getenv("DATABASE_URL") or f"sqlite:///{_SQLITE_PADRAO.as_posix()}"
 # Alguns provedores entregam "postgres://", que o SQLAlchemy não aceita.
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -45,6 +48,18 @@ titulo_historico = Table(
     Column("taxa_venda", Float),
     Column("pu_compra", Float),
     Column("pu_venda", Float),
+)
+
+
+# Uma linha por execução da ETL. A API observa esta tabela para avisar o front (SSE).
+etl_execucoes = Table(
+    "etl_execucoes",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("iniciado_em", DateTime(timezone=True), nullable=False),
+    Column("concluido_em", DateTime(timezone=True), nullable=False),
+    Column("origem", String(30), nullable=False),
+    Column("registros", Integer, nullable=False),
 )
 
 

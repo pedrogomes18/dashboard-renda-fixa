@@ -8,13 +8,14 @@ Uso:
 import argparse
 import csv
 import io
+import os
 import re
 import unicodedata
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import httpx
 
-from app.db import engine, indicadores, init_db, titulo_historico, titulos, upsert
+from app.db import engine, etl_execucoes, indicadores, init_db, titulo_historico, titulos, upsert
 
 # Códigos das séries no SGS do Banco Central.
 SERIES_SGS = {
@@ -112,6 +113,7 @@ def baixar_tesouro(client: httpx.Client) -> str:
 
 
 def run(anos: int = 3) -> None:
+    iniciado_em = datetime.now(timezone.utc)
     hoje = date.today()
     desde = hoje - timedelta(days=365 * anos)
     init_db()
@@ -130,6 +132,14 @@ def run(anos: int = 3) -> None:
         upsert(conn, indicadores, rows_ind)
         upsert(conn, titulos, cad)
         upsert(conn, titulo_historico, hist)
+        conn.execute(
+            etl_execucoes.insert().values(
+                iniciado_em=iniciado_em,
+                concluido_em=datetime.now(timezone.utc),
+                origem="github-actions" if os.getenv("GITHUB_ACTIONS") else "local",
+                registros=len(rows_ind) + len(hist),
+            )
+        )
     print("ETL concluído.")
 
 

@@ -13,7 +13,7 @@ function padrao(titulos: Titulo[]): [string, string] {
   return [ipca?.id ?? "", pre?.id ?? ""];
 }
 
-export function Comparador({ titulos }: { titulos: Titulo[] }) {
+export function Comparador({ titulos, versao }: { titulos: Titulo[]; versao: number }) {
   const [ids, setIds] = useState<[string, string]>(() => padrao(titulos));
   const [periodo, setPeriodo] = useState<PeriodoId>("1a");
   const [dados, setDados] = useState<Record<string, number | string | null>[] | null>(null);
@@ -21,9 +21,11 @@ export function Comparador({ titulos }: { titulos: Titulo[] }) {
 
   useEffect(() => {
     if (!ids[0] || !ids[1]) return;
+    let ativo = true;
     const desde = desdeDoPeriodo(periodo);
     Promise.all(ids.map((id) => api.titulo(id, desde)))
       .then((resps) => {
+        if (!ativo) return;
         const porData = new Map<string, Record<string, number | string | null>>();
         resps.forEach((r, i) => {
           for (const h of r.historico) {
@@ -35,8 +37,11 @@ export function Comparador({ titulos }: { titulos: Titulo[] }) {
         setDados([...porData.values()].sort((x, y) => String(x.data).localeCompare(String(y.data))));
         setErro(null);
       })
-      .catch((e) => setErro(e.message));
-  }, [ids, periodo]);
+      .catch((e) => ativo && setErro(e.message));
+    return () => {
+      ativo = false;
+    };
+  }, [ids, periodo, versao]);
 
   const nome = (id: string) => {
     const t = titulos.find((t) => t.id === id);
@@ -46,7 +51,11 @@ export function Comparador({ titulos }: { titulos: Titulo[] }) {
   const series = ids.map((id, i) => ({ chave: i === 0 ? "a" : "b", nome: nome(id), cor: CORES[i] }));
 
   return (
-    <Painel titulo="Comparador de títulos (taxa de compra, % ao ano)" acoes={<SeletorPeriodo valor={periodo} onChange={setPeriodo} />}>
+    <Painel
+      id="comparador"
+      titulo="Comparador de títulos"
+      subtitulo="Taxa de compra, % ao ano. IPCA+ mostra o juro real, acima da inflação."
+      acoes={<SeletorPeriodo valor={periodo} onChange={setPeriodo} />}>
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {ids.map((id, i) => (
           <label key={i} className="flex flex-col gap-1 text-sm text-secondary">
@@ -54,7 +63,7 @@ export function Comparador({ titulos }: { titulos: Titulo[] }) {
             <select
               value={id}
               onChange={(e) => setIds((atual) => (i === 0 ? [e.target.value, atual[1]] : [atual[0], e.target.value]))}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-primary"
+              className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-primary"
             >
               {titulos.map((t) => (
                 <option key={t.id} value={t.id}>
